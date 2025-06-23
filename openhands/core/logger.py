@@ -283,7 +283,7 @@ def get_console_handler(log_level: int = logging.INFO) -> logging.StreamHandler:
     """Returns a console handler for logging."""
     console_handler = logging.StreamHandler()
     console_handler.setLevel(log_level)
-    formatter_str = '\033[92m%(asctime)s - %(name)s:%(levelname)s\033[0m: %(filename)s:%(lineno)s - %(message)s'
+    formatter_str = '\033[92m%(asctime)s - %(name)s:%(levelname)s\033[0m: %(pathname)s:%(lineno)s - %(message)s'
     console_handler.setFormatter(ColoredFormatter(formatter_str, datefmt='%H:%M:%S'))
     return console_handler
 
@@ -328,7 +328,7 @@ def json_log_handler(
 
 
 # Set up logging
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s %(levelname)s %(filename)s %(lineno)d %(message)s')
 
 
 def log_uncaught_exceptions(

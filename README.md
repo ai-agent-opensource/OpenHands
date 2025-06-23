@@ -164,7 +164,7 @@ In dev-container
 [] make build
 [] make setup-config (once)
 [] cp frontend/.env.sample frontend/.env  (for frontend)
-[] make run
+[] make run-dev (for reload in dev)
 
 ## error history
 to kill port already in use

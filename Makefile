@@ -282,8 +282,8 @@ run:
 	@$(MAKE) -s start-frontend
 	@echo "$(GREEN)Application started successfully.$(RESET)"
 
-# Run the app (standard mode)
-run:
+# Run the app (dev mode)
+run-dev:
 	@echo "$(YELLOW)Running the app...$(RESET)"
 
 	@if [ "$(OS)" = "Windows_NT" ]; then \
