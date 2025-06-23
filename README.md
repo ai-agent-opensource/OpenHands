@@ -156,3 +156,9 @@ For a list of open source projects and licenses used in OpenHands, please see ou
   url={https://openreview.net/forum?id=OJd3ayDDoF}
 }
 ```
+
+
+## Get Started (Development)
+[] make build
+[] make setup-config
+[] make run-dev
