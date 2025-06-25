@@ -157,8 +157,10 @@ For a list of open source projects and licenses used in OpenHands, please see ou
 }
 ```
 
-## get started
+## Get Started
 [] make docker-dev
+[] docker pull ghcr.io/all-hands-ai/runtime:0.45-nikolaik (used when create_conversation)
+
 
 In dev-container
 [] make build
