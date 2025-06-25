@@ -158,15 +158,15 @@ For a list of open source projects and licenses used in OpenHands, please see ou
 ```
 
 ## Get Started
-[] make docker-dev
-[] docker pull ghcr.io/all-hands-ai/runtime:0.45-nikolaik (used when create_conversation)
 
+- [ ] `make docker-dev` 실행
+- [ ] `docker pull ghcr.io/all-hands-ai/runtime:0.45-nikolaik` (create_conversation에서 사용)
 
-In dev-container
-[] make build
-[] make setup-config (once)
-[] cp frontend/.env.sample frontend/.env  (for frontend)
-[] make run-dev (for reload in dev)
+**dev-container 내부에서:**
+- [ ] `make build` 실행
+- [ ] `make setup-config` (최초 1회)
+- [ ] `cp frontend/.env.sample frontend/.env` (프론트엔드 환경설정)
+- [ ] `make run-dev` (핫리로드 개발 서버 실행)
 
 ## error history
 to kill port already in use
