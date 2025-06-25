@@ -161,4 +161,18 @@ For a list of open source projects and licenses used in OpenHands, please see ou
 ## Get Started (Development)
 [] make build
 [] make setup-config
+[] cp frontend/.env.sample frontend/.env
 [] make run-dev
+
+in docker container (fXXX)
+직접 running하고 사이드탭에서 새로운 에서 개발 컨테이너 라는 곳을 찾아야한다. (wow)
+
+
+## Error history
+delete port in use
+```
+for port in 3000 3001 3002; do lsof -ti tcp:$port | xargs -r kill -9; done
+lsof -ti tcp:3000, 3001 | xargs -r kill -9;
+```
+
+

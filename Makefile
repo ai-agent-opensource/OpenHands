@@ -248,7 +248,7 @@ build-frontend:
 # Start backend
 start-backend:
 	@echo "$(YELLOW)Starting backend...$(RESET)"
-	@poetry run uvicorn openhands.server.listen:app --host $(BACKEND_HOST) --port $(BACKEND_PORT) --reload --reload-exclude "./workspace"
+	@poetry run uvicorn openhands.server.listen:app --host $(BACKEND_HOST) --port $(BACKEND_PORT) --reload --reload-exclude "./workspace" --reload-dir "./openhands"
 
 # Start frontend
 start-frontend:
@@ -279,6 +279,24 @@ _run_setup:
 run:
 	@echo "$(YELLOW)Running the app...$(RESET)"
 	@$(MAKE) -s _run_setup
+	@$(MAKE) -s start-frontend
+	@echo "$(GREEN)Application started successfully.$(RESET)"
+
+# Run the app (standard mode)
+run-dev:
+	@echo "$(YELLOW)Running the app...$(RESET)"
+
+	@if [ "$(OS)" = "Windows_NT" ]; then \
+		echo "$(RED) Windows is not supported, use WSL instead!$(RESET)"; \
+		exit 1; \
+	fi
+	@mkdir -p logs
+	@echo "$(YELLOW)Starting backend server...$(RESET)"
+	@poetry run uvicorn openhands.server.listen:app --host $(BACKEND_HOST) --port $(BACKEND_PORT) --reload --reload-dir './openhands' &
+	@echo "$(YELLOW)Waiting for the backend to start...$(RESET)"
+	@until nc -z localhost $(BACKEND_PORT); do sleep 0.1; done
+	@echo "$(GREEN)Backend started successfully.$(RESET)"
+
 	@$(MAKE) -s start-frontend
 	@echo "$(GREEN)Application started successfully.$(RESET)"
 
