@@ -48,7 +48,7 @@ Learn more at [docs.all-hands.dev](https://docs.all-hands.dev), or [sign up for 
 
 ## ☁️ OpenHands Cloud
 The easiest way to get started with OpenHands is on [OpenHands Cloud](https://app.all-hands.dev),
-which comes with $20 in free credits for new users.
+which comes with $50 in free credits for new users.
 
 ## 💻 Running OpenHands Locally
 
@@ -62,17 +62,17 @@ system requirements and more information.
 
 
 ```bash
-docker pull docker.all-hands.dev/all-hands-ai/runtime:0.45-nikolaik
+docker pull docker.all-hands.dev/all-hands-ai/runtime:0.44-nikolaik
 
 docker run -it --rm --pull=always \
-    -e SANDBOX_RUNTIME_CONTAINER_IMAGE=docker.all-hands.dev/all-hands-ai/runtime:0.45-nikolaik \
+    -e SANDBOX_RUNTIME_CONTAINER_IMAGE=docker.all-hands.dev/all-hands-ai/runtime:0.44-nikolaik \
     -e LOG_ALL_EVENTS=true \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ~/.openhands:/.openhands \
     -p 3000:3000 \
     --add-host host.docker.internal:host-gateway \
     --name openhands-app \
-    docker.all-hands.dev/all-hands-ai/openhands:0.45
+    docker.all-hands.dev/all-hands-ai/openhands:0.44
 ```
 
 > **Note**: If you used OpenHands before version 0.44, you may want to run `mv ~/.openhands-state ~/.openhands` to migrate your conversation history to the new location.
@@ -157,22 +157,23 @@ For a list of open source projects and licenses used in OpenHands, please see ou
 }
 ```
 
+## get started
+[] make docker-dev
 
-## Get Started (Development)
+In dev-container
 [] make build
-[] make setup-config
-[] cp frontend/.env.sample frontend/.env
-[] make run-dev
+[] make setup-config (once)
+[] cp frontend/.env.sample frontend/.env  (for frontend)
+[] make run-dev (for reload in dev)
 
-in docker container (fXXX)
-직접 running하고 사이드탭에서 새로운 에서 개발 컨테이너 라는 곳을 찾아야한다. (wow)
-
-
-## Error history
-delete port in use
+## error history
+to kill port already in use
 ```
-for port in 3000 3001 3002; do lsof -ti tcp:$port | xargs -r kill -9; done
-lsof -ti tcp:3000, 3001 | xargs -r kill -9;
+lsof -ti:3000,3001,3002 | xargs kill -9
+pkill -f uvicorn
 ```
 
-
+to check port list
+```
+lsof -i
+```
