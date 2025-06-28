@@ -89,6 +89,7 @@ class SandboxConfig(BaseModel):
     )
 
     model_config = {'extra': 'forbid'}
+    runtime_mount: str | None = Field(default=None)
 
     @classmethod
     def from_toml_section(cls, data: dict) -> dict[str, 'SandboxConfig']:
