@@ -36,7 +36,7 @@ try:
 finally:
     os.remove(config_file_path)
 
-# should care about speed later
+# should care about "speed" later
 
 
 print("******* New Conversation PART *******")
@@ -96,9 +96,33 @@ from types import MappingProxyType
 from openhands.server.user_auth.user_auth import AuthType
 from openhands.integrations.provider import ProviderType, ProviderToken # ProviderType과 ProviderToken을 임포트합니다.
 from pydantic import SecretStr # SecretStr을 임포트합니다.
+from openhands.storage.settings.file_settings_store import FileSettingsStore
+from openhands.cli.main import run_setup_flow
 
 
 async def main():
+    # need settings.json (is it conifg? )
+    # cannot find
+    config = load_openhands_config()
+    settings_store = await FileSettingsStore.get_instance(config=config, user_id=None)
+    settings = await settings_store.load()
+
+    print('------')
+    pprint.pprint(settings)
+    print('------')
+
+    if not settings:
+        # Clear the terminal before showing the banner
+        await run_setup_flow(config, settings_store)
+        banner_shown = True
+
+        settings = await settings_store.load()
+
+    print('---run_setup_flow---')
+    pprint.pprint(settings)
+    print('------')
+
+
     test_user_id = "test_user_id"
     conversation_store = await ConversationStoreImpl.get_instance(config, test_user_id)
 
@@ -118,12 +142,10 @@ async def main():
         data=test_request,
         user_id='test_user',
         provider_tokens=MappingProxyType({ProviderType.GITHUB: ProviderToken(token=SecretStr('token123'))}), # 키와 값을 올바른 타입으로 변경합니다.
-        user_secrets=mock_user_secrets,
-        auth_type=None,
+        user_secrets=mock_user_secrets,        auth_type=None,
     )
     print("-------")
     pprint.pprint(response.body)
-    pprint.pprint(dir(response))
     print("-------")
 
 asyncio.run(main())
