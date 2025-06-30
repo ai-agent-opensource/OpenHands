@@ -36,6 +36,8 @@ try:
 finally:
     os.remove(config_file_path)
 
+# should care about speed later
+
 
 print("******* New Conversation PART *******")
 
@@ -67,6 +69,69 @@ assert ConversationManagerImpl is StandaloneConversationManager, 'ConversationMa
 
 ConversationManager_DEFAULT = get_impl(ConversationManager, None)
 assert ConversationManager_DEFAULT is ConversationManager, 'ConversationManager_DEFAULT ConversationManager 합니다.'
+
+print("******* First time to start new conversation PART *******")
+
+import asyncio
+import pprint
+from openhands.storage.data_models.settings import Settings
+from openhands.server.shared import (
+    ConversationStoreImpl,
+    SecretsStoreImpl,
+    SettingsStoreImpl,
+    config,
+    conversation_manager,
+    server_config,
+)
+from openhands.server.routes.manage_conversations import (
+    ConversationResponse,
+    InitSessionRequest,
+    delete_conversation,
+    get_conversation,
+    new_conversation,
+    search_conversations,
+)
+from unittest.mock import AsyncMock, MagicMock, patch
+from types import MappingProxyType
+from openhands.server.user_auth.user_auth import AuthType
+from openhands.integrations.provider import ProviderType, ProviderToken # ProviderType과 ProviderToken을 임포트합니다.
+from pydantic import SecretStr # SecretStr을 임포트합니다.
+
+
+async def main():
+    test_user_id = "test_user_id"
+    conversation_store = await ConversationStoreImpl.get_instance(config, test_user_id)
+
+    test_request = InitSessionRequest(
+        # repository='test/repo',
+        repository='',
+        selected_branch='main',
+        initial_user_msg='Hello, agent!',
+        image_urls=['https://example.com/image.jpg'],
+    )
+
+
+    mock_user_secrets = MagicMock()
+    mock_user_secrets.custom_secrets = MappingProxyType({})
+
+    response = await new_conversation(
+        data=test_request,
+        user_id='test_user',
+        provider_tokens=MappingProxyType({ProviderType.GITHUB: ProviderToken(token=SecretStr('token123'))}), # 키와 값을 올바른 타입으로 변경합니다.
+        user_secrets=mock_user_secrets,
+        auth_type=None,
+    )
+    print("-------")
+    pprint.pprint(response.body)
+    pprint.pprint(dir(response))
+    print("-------")
+
+asyncio.run(main())
+
+
+
+
+
 
 
 
