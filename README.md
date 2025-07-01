@@ -168,14 +168,7 @@ For a list of open source projects and licenses used in OpenHands, please see ou
 - [ ] `cp frontend/.env.sample frontend/.env` (프론트엔드 환경설정)
 - [ ] `make run-dev` (핫리로드 개발 서버 실행)
 
-## error history
-to kill port already in use
+## Understaning the process with ramp.py
 ```
-lsof -ti:3000,3001,3002 | xargs kill -9
-pkill -f uvicorn
-```
-
-to check port list
-```
-lsof -i
+poetry run python openhands/doc/ramp.py
 ```
