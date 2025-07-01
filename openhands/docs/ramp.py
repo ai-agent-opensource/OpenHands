@@ -144,10 +144,9 @@ async def main():
         provider_tokens=MappingProxyType({ProviderType.GITHUB: ProviderToken(token=SecretStr('token123'))}), # 키와 값을 올바른 타입으로 변경합니다.
         user_secrets=mock_user_secrets,        auth_type=None,
     )
-    print("-------")
-    pprint.pprint(response.body)
-    print("-------")
-
+    """
+    ConversationResponse(status='ok', conversation_id='80f9e6f38bc544bd900d98a09821c5bf', message=None, conversation_status=<ConversationStatus.STARTING: 'STARTING'>)
+    """
 asyncio.run(main())
 
 
