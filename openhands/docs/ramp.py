@@ -101,11 +101,15 @@ from openhands.cli.main import run_setup_flow
 
 
 async def main():
-    # need settings.json (is it conifg? )
-    # cannot find
-    config = load_openhands_config()
-    settings_store = await FileSettingsStore.get_instance(config=config, user_id=None)
+    # # settings from cli
+    # config = load_openhands_config()
+    # settings_store = await FileSettingsStore.get_instance(config=config, user_id=None)
+    # settings = await settings_store.load()
+
+    # settings from web process
+    settings_store = await SettingsStoreImpl.get_instance(config, user_id=None)
     settings = await settings_store.load()
+
 
     print('------')
     pprint.pprint(settings)
