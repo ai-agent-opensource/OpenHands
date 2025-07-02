@@ -101,27 +101,21 @@ from openhands.cli.main import run_setup_flow
 
 
 async def main():
-    # need settings.json (is it conifg? )
-    # cannot find
-    config = load_openhands_config()
-    settings_store = await FileSettingsStore.get_instance(config=config, user_id=None)
+    # # settings from cli
+    # config = load_openhands_config()
+    # settings_store = await FileSettingsStore.get_instance(config=config, user_id=None)
+    # settings = await settings_store.load()
+
+    # settings from web process
+    settings_store = await SettingsStoreImpl.get_instance(config, user_id=None)
     settings = await settings_store.load()
 
-    print('------')
-    pprint.pprint(settings)
-    print('------')
-
+    # add for easy setup in terminal
     if not settings:
         # Clear the terminal before showing the banner
         await run_setup_flow(config, settings_store)
         banner_shown = True
-
         settings = await settings_store.load()
-
-    print('---run_setup_flow---')
-    pprint.pprint(settings)
-    print('------')
-
 
     test_user_id = "test_user_id"
     conversation_store = await ConversationStoreImpl.get_instance(config, test_user_id)
@@ -133,7 +127,6 @@ async def main():
         initial_user_msg='Hello, agent!',
         image_urls=['https://example.com/image.jpg'],
     )
-
 
     mock_user_secrets = MagicMock()
     mock_user_secrets.custom_secrets = MappingProxyType({})
@@ -147,6 +140,23 @@ async def main():
     """
     ConversationResponse(status='ok', conversation_id='80f9e6f38bc544bd900d98a09821c5bf', message=None, conversation_status=<ConversationStatus.STARTING: 'STARTING'>)
     """
+
+    print("******* Agent session start PART *******")
+    # DEBUG = os.getenv('DEBUG', 'True').lower() in ['true', '1', 'yes'] # openhands/core/logger.py
+
+    ## cli -> self-docker: not enough
+    ## web -> host local docker independently
+
+    #  conversation_manager.maybe_start_agent_loop() -> session.initialize_agent -> self.agent_session.start
+
+    # self.agent_session.start -> self.runtime.connect() ->  self.init_container()
+
+    # NOTE: 런타임이 완전히 초기화될 시간을 주기 위해 추가
+    #       이 파일을 테스트용으로 실행할 경우, 이 sleep 시간을 충분히 길게 설정해야 합니다.
+    #       실제 프로덕션 코드에서는 이와 같은 무작정 대기는 적절하지 않습니다.
+    await asyncio.sleep(60) # 60초 동안 대기하여 런타임 초기화 시간 확보
+
+
 asyncio.run(main())
 
 
