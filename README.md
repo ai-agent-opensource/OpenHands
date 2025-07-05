@@ -157,10 +157,15 @@ For a list of open source projects and licenses used in OpenHands, please see ou
 }
 ```
 
-## Get Started
+## Get Started (when first)
 
 - [ ] `make docker-dev` 실행
 - [ ] `docker pull ghcr.io/all-hands-ai/runtime:0.45-nikolaik` (create_conversation에서 사용)
+
+## (when second)
+```
+just start with images
+```
 
 **dev-container 내부에서:**
 - [ ] `make build` 실행
