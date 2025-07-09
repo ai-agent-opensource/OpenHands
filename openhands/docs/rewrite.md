@@ -22,6 +22,13 @@ self.runtime.connect() -> DockerRuntime.connect() #docker_runtime.py
 self.init_container() #docker_runtime.py
 ```
 
+better structure
+graph TD
+    A[app.py - new_conversation] --> B[conversation_service.py - create_agent]
+    B --> C[AgentDirectExecutor - run]
+    C --> D[DockerRuntime - start]
+
+
 
 ### Memo
 "conversation_store" need for tracking conversation status
