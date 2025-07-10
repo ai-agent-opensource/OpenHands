@@ -199,3 +199,46 @@ async def setup_init_convo_settings(
     return ExperimentManagerImpl.run_conversation_variant_test(
         user_id, conversation_id, convo_init_data
     )
+
+# from openhands.core.agent import BaseAgent
+# from openhands.runtime.docker import DockerRuntime
+# from openhands.server.data_models.agent_loop_info import AgentLoopInfo
+# from openhands.server.session.conversation_init_data import ConversationInitData
+
+# 이 파일의 상단에 AgentDirectExecutor를 임포트해야 합니다.
+# from your_module_path.agent_direct_executor import AgentDirectExecutor
+
+# async def create_agent(
+#     conversation_id: str,
+#     conversation_init_data: ConversationInitData,
+#     user_id: str | None,
+#     initial_user_msg: str | None = None,
+#     replay_json: str | None = None,
+# ) -> AgentLoopInfo:
+#     logger.info(f"새로운 에이전트 생성을 시작합니다: {conversation_id}")
+
+#     # 1. 에이전트 인스턴스 생성 (conversation_init_data 기반)
+#     # 이 부분은 실제 에이전트 인스턴스를 생성하는 로직으로 대체되어야 합니다.
+#     # 예를 들어, settings에서 에이전트 유형을 로드하고 인스턴스화합니다.
+#     agent_instance = BaseAgent(
+#         llm_config=conversation_init_data.llm_config,
+#         # ... 에이전트에 필요한 다른 파라미터 ...
+#     )
+
+#     # 2. 런타임 인스턴스 생성 (DockerRuntime을 사용한다고 가정)
+#     runtime_instance = DockerRuntime(
+#         # ... 런타임에 필요한 설정 파라미터 ...
+#     )
+
+#     # 3. AgentDirectExecutor 인스턴스 생성 및 실행
+#     executor = AgentDirectExecutor(agent_instance, runtime_instance)
+#     await executor.run()
+
+#     logger.info(f"에이전트 생성이 완료되었습니다: {conversation_id}")
+
+#     # AgentLoopInfo 반환
+#     # 이 부분은 실제 AgentLoopInfo 객체를 생성하고 필요한 정보를 채워야 합니다.
+#     # return AgentLoopInfo(
+#     #     conversation_id=conversation_id,
+#     #     # ... 필요한 다른 필드 ...
+#     # )
