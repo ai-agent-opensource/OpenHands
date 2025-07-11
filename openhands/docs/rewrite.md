@@ -53,16 +53,20 @@ development speed
 
 #### runtime
 ```python
-new_conversation() #manage_conversation.py from app.py
+new_conversation() #app.py.py
 
-# -- deleted ---
-create_new_conversation() #conversation_service.py
-maybe_start_agent_loop() #_conversation_manager.py
-initialize_agent() #session.py
-start() #agent_session.py
-_create_runtime() #agent_session.py
-self.runtime.connect() -> DockerRuntime.connect() #docker_runtime.py
-self.init_container() #docker_runtime.py
+# -- deleted --- # Used place
+create_new_conversation() #manage_conversation.py
+    maybe_start_agent_loop() #conversation_service.py
+        initialize_agent() #_conversation_manager.py
+            MCPConfig() # session.py
+            Agent.get_cls(agent_cls)(llm, agent_config) # session.py
+            start() #session.py
+                _create_runtime() # agent_session.py
+                _create_memory()
+                _run_replay() or _create_controller()
+                self.runtime.connect() -> DockerRuntime.connect()
+                        self.init_container() #docker_runtime.py
 # --------------
 
 DockerRuntime() # docker_runtime.py
@@ -86,3 +90,4 @@ graph TD
 
 ### Memo
 "conversation_store" need for tracking conversation status
+- use Agent from session.py instead of making BaseAgent
