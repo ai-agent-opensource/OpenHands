@@ -36,6 +36,140 @@ from openhands.storage.files import FileStore
 ROOM_KEY = 'room:{sid}'
 
 
+from dataclasses import dataclass, field
+from typing import List, Dict
+
+@dataclass
+class LLMConfig:
+    model: str = ''
+    api_key: str | None = None
+    base_url: str | None = None
+    # ... 기타 LLM 관련 설정
+
+@dataclass
+class SecurityConfig:
+    confirmation_mode: str = 'auto'
+    security_analyzer: str | None = None
+
+@dataclass
+class SandboxConfig:
+    base_container_image: str | None = None
+    runtime_container_image: str | None = None
+
+@dataclass
+class AgentSettings:
+    """최종적으로 에이전트 실행에 필요한 모든 설정을 담는 컨테이너"""
+    agent_cls: type
+    max_iterations: int
+    max_budget_per_task: float | None
+    llm_config: LLMConfig
+    security_config: SecurityConfig
+    sandbox_config: SandboxConfig
+    mcp_config: MCPConfig # MCPConfig도 dataclass로 정의되었다고 가정
+    condenser_config: CondenserPipelineConfig | None = None
+    # ... 기타 필요한 설정 그룹
+
+
+
+def create_llm_config(base_llm_config, user_settings: Settings) -> LLMConfig:
+    """사용자 설정과 기본 설정을 조합해 LLM 설정을 생성합니다."""
+    return LLMConfig(
+        model=user_settings.llm_model or base_llm_config.model,
+        api_key=user_settings.llm_api_key,
+        base_url=user_settings.llm_base_url,
+    )
+
+def create_security_config(base_security_config, user_settings: Settings) -> SecurityConfig:
+    """보안 설정을 생성합니다."""
+    return SecurityConfig(
+        confirmation_mode=user_settings.confirmation_mode if user_settings.confirmation_mode is not None else base_security_config.confirmation_mode,
+        security_analyzer=user_settings.security_analyzer or base_security_config.security_analyzer,
+    )
+
+def create_sandbox_config(base_sandbox_config, user_settings: Settings) -> SandboxConfig:
+    # SandboxConfig 생성 로직
+    return SandboxConfig(
+        base_container_image=user_settings.sandbox_base_container_image or base_sandbox_config.base_container_image,
+        runtime_container_image=user_settings.sandbox_runtime_container_image if user_settings.sandbox_base_container_image or user_settings.sandbox_runtime_container_image else base_sandbox_config.runtime_container_image,
+    )
+
+# def create_condenser_config(user_settings: Settings, llm_config: LLMConfig) -> CondenserPipelineConfig | None:
+#     """Condenser 설정을 생성합니다. LLM 설정에 의존합니다."""
+#     if user_settings.enable_default_condenser:
+#         return CondenserPipelineConfig(
+#             condensers=[
+#                 BrowserOutputCondenserConfig(attention_window=2),
+#                 LLMSummarizingCondenserConfig(
+#                     llm_config={'model': llm_config.model, ...}, # dict로 변환
+#                     ...
+#                 ),
+#             ]
+#         )
+#     return None
+
+# def create_mcp_config(user_settings: Settings) -> MCPConfig:
+
+#     # # MCPConfig 생성 로직
+#     # mcp_config = self.user_settings.mcp_config or MCPConfig(sse_servers=[], stdio_servers=[])
+#     # # Add OpenHands' MCP server by default
+#     # openhands_mcp_server, openhands_mcp_stdio_servers = \
+#     #     OpenHandsMCPConfigImpl.create_default_mcp_server_config(
+#     #         self.base_config.mcp_host, self.base_config, self.user_id # Note: user_id is from user_settings here
+#     #     )
+#     # if openhands_mcp_server:
+#     #     mcp_config.shttp_servers.append(openhands_mcp_server)
+#     # mcp_config.stdio_servers.extend(openhands_mcp_stdio_servers)
+#     # return mcp_config
+
+#     # user_settings에 mcp_config가 있으면 그것을 사용하고, 없으면 기본 빈 객체를 생성합니다.
+#     # OpenHands 기본 서버 추가 로직은 여기서 제거합니다.
+#     return user_settings.mcp_config or MCPConfig(sse_servers=[], stdio_servers=[])
+
+
+def create_condenser_config(user_settings, llm_config: LLMConfig) -> CondenserPipelineConfig | None:
+    # CondenserPipelineConfig 생성 로직
+    if user_settings.enable_default_condenser:
+        return CondenserPipelineConfig(
+            condensers=[
+                BrowserOutputCondenserConfig(attention_window=2),
+                LLMSummarizingCondenserConfig(
+                    # llm_config={'model': llm_config.model, 'api_key': llm_config.api_key, 'base_url': llm_config.base_url}, # Pass as dict as expected by the config
+                    llm_config={'model': llm_config.model, 'api_key': llm_config.api_key, 'base_url': llm_config.base_url}, # 수정된 부분
+                    keep_first=4,
+                    max_size=120,
+                ),
+            ]
+        )
+    return None
+
+# 전체를 조립하는 메인 '파이프라인' 함수
+def build_agent_settings(base_config, user_settings: Settings) -> AgentSettings:
+    """
+    설정 생성 함수들을 파이프라인처럼 연결하여
+    최종 AgentSettings 객체를 만듭니다.
+    """
+    # 1. 각 부분을 독립적으로 생성
+    llm_conf = create_llm_config(base_config.get_llm_config(), user_settings)
+    security_conf = create_security_config(base_config.security, user_settings)
+    sandbox_conf = create_sandbox_config(base_config.sandbox, user_settings)
+    mcp_conf = user_settings.mcp_config or MCPConfig(sse_servers=[], stdio_servers=[]) # 컨텍스트 없는 기본 MCP 생성
+
+    # 2. 다른 생성 결과에 의존하는 부분 생성
+    condenser_conf = create_condenser_config(user_settings, llm_conf)
+
+    # 3. 모든 조각을 모아 최종 데이터 구조 완성
+    return AgentSettings(
+        agent_cls=user_settings.agent or base_config.default_agent,
+        max_iterations=user_settings.max_iterations or base_config.max_iterations,
+        max_budget_per_task=user_settings.max_budget_per_task if user_settings.max_budget_per_task is not None else base_config.max_budget_per_task,
+        llm_config=llm_conf,
+        security_config=security_conf,
+        sandbox_config=sandbox_conf,
+        mcp_config=mcp_conf,
+        condenser_config=condenser_conf,
+    )
+
+
 class Session:
     sid: str
     sio: socketio.AsyncServer | None
@@ -87,152 +221,213 @@ class Session:
         self.is_alive = False
         await self.agent_session.close()
 
+
+
     async def initialize_agent(
         self,
         settings: Settings,
         initial_message: MessageAction | None,
         replay_json: str | None,
     ) -> None:
-        self.agent_session.event_stream.add_event(
-            AgentStateChangedObservation('', AgentState.LOADING),
-            EventSource.ENVIRONMENT,
-        )
-        agent_cls = settings.agent or self.config.default_agent
-        self.config.security.confirmation_mode = (
-            self.config.security.confirmation_mode
-            if settings.confirmation_mode is None
-            else settings.confirmation_mode
-        )
-        self.config.security.security_analyzer = (
-            settings.security_analyzer or self.config.security.security_analyzer
-        )
-        self.config.sandbox.base_container_image = (
-            settings.sandbox_base_container_image
-            or self.config.sandbox.base_container_image
-        )
-        self.config.sandbox.runtime_container_image = (
-            settings.sandbox_runtime_container_image
-            if settings.sandbox_base_container_image
-            or settings.sandbox_runtime_container_image
-            else self.config.sandbox.runtime_container_image
-        )
-        max_iterations = settings.max_iterations or self.config.max_iterations
+        # self.agent_session.event_stream.add_event(
+        #     AgentStateChangedObservation('', AgentState.LOADING),
+        #     EventSource.ENVIRONMENT,
+        # )
+        # agent_cls = settings.agent or self.config.default_agent
+        # self.config.security.confirmation_mode = (
+        #     self.config.security.confirmation_mode
+        #     if settings.confirmation_mode is None
+        #     else settings.confirmation_mode
+        # )
+        # self.config.security.security_analyzer = (
+        #     settings.security_analyzer or self.config.security.security_analyzer
+        # )
+        # self.config.sandbox.base_container_image = (
+        #     settings.sandbox_base_container_image
+        #     or self.config.sandbox.base_container_image
+        # )
+        # self.config.sandbox.runtime_container_image = (
+        #     settings.sandbox_runtime_container_image
+        #     if settings.sandbox_base_container_image
+        #     or settings.sandbox_runtime_container_image
+        #     else self.config.sandbox.runtime_container_image
+        # )
+        # max_iterations = settings.max_iterations or self.config.max_iterations
 
-        # Prioritize settings over config for max_budget_per_task
-        max_budget_per_task = (
-            settings.max_budget_per_task
-            if settings.max_budget_per_task is not None
-            else self.config.max_budget_per_task
-        )
+        # # Prioritize settings over config for max_budget_per_task
+        # max_budget_per_task = (
+        #     settings.max_budget_per_task
+        #     if settings.max_budget_per_task is not None
+        #     else self.config.max_budget_per_task
+        # )
 
-        # This is a shallow copy of the default LLM config, so changes here will
-        # persist if we retrieve the default LLM config again when constructing
-        # the agent
-        default_llm_config = self.config.get_llm_config()
-        default_llm_config.model = settings.llm_model or ''
-        default_llm_config.api_key = settings.llm_api_key
-        default_llm_config.base_url = settings.llm_base_url
-        self.config.search_api_key = settings.search_api_key
+        # # This is a shallow copy of the default LLM config, so changes here will
+        # # persist if we retrieve the default LLM config again when constructing
+        # # the agent
+        # default_llm_config = self.config.get_llm_config()
+        # default_llm_config.model = settings.llm_model or ''
+        # default_llm_config.api_key = settings.llm_api_key
+        # default_llm_config.base_url = settings.llm_base_url
+        # self.config.search_api_key = settings.search_api_key
 
-        # NOTE: this need to happen AFTER the config is updated with the search_api_key
-        self.config.mcp = settings.mcp_config or MCPConfig(
-            sse_servers=[], stdio_servers=[]
-        )
-        # Add OpenHands' MCP server by default
-        openhands_mcp_server, openhands_mcp_stdio_servers = (
-            OpenHandsMCPConfigImpl.create_default_mcp_server_config(
+        # # NOTE: this need to happen AFTER the config is updated with the search_api_key
+        # self.config.mcp = settings.mcp_config or MCPConfig(
+        #     sse_servers=[], stdio_servers=[]
+        # )
+        # # Add OpenHands' MCP server by default
+        # openhands_mcp_server, openhands_mcp_stdio_servers = (
+        #     OpenHandsMCPConfigImpl.create_default_mcp_server_config(
+        #         self.config.mcp_host, self.config, self.user_id
+        #     )
+        # )
+        # if openhands_mcp_server:
+        #     self.config.mcp.shttp_servers.append(openhands_mcp_server)
+        # self.config.mcp.stdio_servers.extend(openhands_mcp_stdio_servers)
+
+        # # TODO: override other LLM config & agent config groups (#2075)
+
+        # llm = self._create_llm(agent_cls)
+        # agent_config = self.config.get_agent_config(agent_cls)
+
+        # if settings.enable_default_condenser:
+        #     # Default condenser chains a condenser that limits browser the total
+        #     # size of browser observations with a condenser that limits the size
+        #     # of the view given to the LLM. The order matters: with the browser
+        #     # output first, the summarizer will only see the most recent browser
+        #     # output, which should keep the summarization cost down.
+        #     default_condenser_config = CondenserPipelineConfig(
+        #         condensers=[
+        #             BrowserOutputCondenserConfig(attention_window=2),
+        #             LLMSummarizingCondenserConfig(
+        #                 llm_config=llm.config, keep_first=4, max_size=120
+        #             ),
+        #         ]
+        #     )
+
+        #     self.logger.info(
+        #         f'Enabling pipeline condenser with:'
+        #         f' browser_output_masking(attention_window=2), '
+        #         f' llm(model="{llm.config.model}", '
+        #         f' base_url="{llm.config.base_url}", '
+        #         f' keep_first=4, max_size=80)'
+        #     )
+        #     agent_config.condenser = default_condenser_config
+        # agent = Agent.get_cls(agent_cls)(llm, agent_config)
+        # print('----- print -----')
+        # print(dir(agent))
+        # print(agent.config)
+        # print('-'*30)
+        # exit(0)
+
+        # git_provider_tokens = None
+        # selected_repository = None
+        # selected_branch = None
+        # custom_secrets = None
+        # conversation_instructions = None
+        # if isinstance(settings, ConversationInitData):
+        #     git_provider_tokens = settings.git_provider_tokens
+        #     selected_repository = settings.selected_repository
+        #     selected_branch = settings.selected_branch
+        #     custom_secrets = settings.custom_secrets
+        #     conversation_instructions = settings.conversation_instructions
+
+        # try:
+        #     await self.agent_session.start(
+        #         runtime_name=self.config.runtime,
+        #         config=self.config,
+        #         agent=agent,
+        #         max_iterations=max_iterations,
+        #         max_budget_per_task=max_budget_per_task,
+        #         agent_to_llm_config=self.config.get_agent_to_llm_config_map(),
+        #         agent_configs=self.config.get_agent_configs(),
+        #         git_provider_tokens=git_provider_tokens,
+        #         custom_secrets=custom_secrets,
+        #         selected_repository=selected_repository,
+        #         selected_branch=selected_branch,
+        #         initial_message=initial_message,
+        #         conversation_instructions=conversation_instructions,
+        #         replay_json=replay_json,
+        #     )
+        # except MicroagentValidationError as e:
+        #     self.logger.exception(f'Error creating agent_session: {e}')
+        #     # For microagent validation errors, provide more helpful information
+        #     await self.send_error(f'Failed to create agent session: {str(e)}')
+        #     return
+        # except ValueError as e:
+        #     self.logger.exception(f'Error creating agent_session: {e}')
+        #     error_message = str(e)
+        #     # For ValueError related to microagents, provide more helpful information
+        #     if 'microagent' in error_message.lower():
+        #         await self.send_error(
+        #             f'Failed to create agent session: {error_message}'
+        #         )
+        #     else:
+        #         # For other ValueErrors, just show the error class
+        #         await self.send_error('Failed to create agent session: ValueError')
+        #     return
+        # except Exception as e:
+        #     self.logger.exception(f'Error creating agent_session: {e}')
+        #     # For other errors, just show the error class to avoid exposing sensitive information
+        #     await self.send_error(
+        #         f'Failed to create agent session: {e.__class__.__name__}'
+        #     )
+        #     return
+
+        print('----- Before starting -----')
+        try:
+            # 1. 순수 함수를 호출해 모든 설정을 한번에 생성 (데이터 변환)
+            agent_settings = build_agent_settings(self.config, settings)
+
+            # 2. OOP와 동일: 컨텍스트 데이터('user_id') 주입
+            # 이 로직은 여전히 'Session'의 책임이므로 여기에 있는 것이 자연스럽습니다.
+            openhands_mcp_server, stdio_servers = OpenHandsMCPConfigImpl.create_default_mcp_server_config(
                 self.config.mcp_host, self.config, self.user_id
             )
-        )
-        if openhands_mcp_server:
-            self.config.mcp.shttp_servers.append(openhands_mcp_server)
-        self.config.mcp.stdio_servers.extend(openhands_mcp_stdio_servers)
+            if openhands_mcp_server:
+                agent_settings.mcp_config.shttp_servers.append(openhands_mcp_server)
+            agent_settings.mcp_config.stdio_servers.extend(stdio_servers)
 
-        # TODO: override other LLM config & agent config groups (#2075)
+            # 3. 완성된 설정(데이터)을 바탕으로 실제 행위를 하는 '객체'들을 생성 (컴포지션)
+            # 이 부분부터는 다시 OOP의 세계와 자연스럽게 연결됩니다.
+            llm = self._create_llm(agent_settings.agent_cls, agent_settings.llm_config)
+            agent_config = self.config.get_agent_config(agent_settings.agent_cls)
+            agent_config.condenser = agent_settings.condenser_config
+            agent = Agent.get_cls(agent_settings.agent_cls)(llm, agent_config)
 
-        llm = self._create_llm(agent_cls)
-        agent_config = self.config.get_agent_config(agent_cls)
+            print('----- print -----')
+            print(dir(agent))
+            print(agent.config)
+            print('-'*30)
+            exit(0)
 
-        if settings.enable_default_condenser:
-            # Default condenser chains a condenser that limits browser the total
-            # size of browser observations with a condenser that limits the size
-            # of the view given to the LLM. The order matters: with the browser
-            # output first, the summarizer will only see the most recent browser
-            # output, which should keep the summarization cost down.
-            default_condenser_config = CondenserPipelineConfig(
-                condensers=[
-                    BrowserOutputCondenserConfig(attention_window=2),
-                    LLMSummarizingCondenserConfig(
-                        llm_config=llm.config, keep_first=4, max_size=120
-                    ),
-                ]
-            )
+            # 3. 세션 시작에 필요한 파라미터를 담는 컨테이너 객체 생성
+            session_params = self._prepare_session_parameters(settings, initial_message, replay_json)
 
-            self.logger.info(
-                f'Enabling pipeline condenser with:'
-                f' browser_output_masking(attention_window=2), '
-                f' llm(model="{llm.config.model}", '
-                f' base_url="{llm.config.base_url}", '
-                f' keep_first=4, max_size=80)'
-            )
-            agent_config.condenser = default_condenser_config
-        agent = Agent.get_cls(agent_cls)(llm, agent_config)
-
-        git_provider_tokens = None
-        selected_repository = None
-        selected_branch = None
-        custom_secrets = None
-        conversation_instructions = None
-        if isinstance(settings, ConversationInitData):
-            git_provider_tokens = settings.git_provider_tokens
-            selected_repository = settings.selected_repository
-            selected_branch = settings.selected_branch
-            custom_secrets = settings.custom_secrets
-            conversation_instructions = settings.conversation_instructions
-
-        try:
+            # 4. 단순화된 파라미터로 세션 시작
             await self.agent_session.start(
-                runtime_name=self.config.runtime,
-                config=self.config,
                 agent=agent,
-                max_iterations=max_iterations,
-                max_budget_per_task=max_budget_per_task,
-                agent_to_llm_config=self.config.get_agent_to_llm_config_map(),
-                agent_configs=self.config.get_agent_configs(),
-                git_provider_tokens=git_provider_tokens,
-                custom_secrets=custom_secrets,
-                selected_repository=selected_repository,
-                selected_branch=selected_branch,
-                initial_message=initial_message,
-                conversation_instructions=conversation_instructions,
-                replay_json=replay_json,
+                settings=agent_settings,
+                params=session_params
             )
-        except MicroagentValidationError as e:
+
+        except (MicroagentValidationError, ValueError, Exception) as e:
+            # 에러 처리 로직은 기존과 유사하게 유지
             self.logger.exception(f'Error creating agent_session: {e}')
-            # For microagent validation errors, provide more helpful information
-            await self.send_error(f'Failed to create agent session: {str(e)}')
-            return
-        except ValueError as e:
-            self.logger.exception(f'Error creating agent_session: {e}')
-            error_message = str(e)
-            # For ValueError related to microagents, provide more helpful information
-            if 'microagent' in error_message.lower():
-                await self.send_error(
-                    f'Failed to create agent session: {error_message}'
-                )
-            else:
-                # For other ValueErrors, just show the error class
-                await self.send_error('Failed to create agent session: ValueError')
-            return
-        except Exception as e:
-            self.logger.exception(f'Error creating agent_session: {e}')
-            # For other errors, just show the error class to avoid exposing sensitive information
-            await self.send_error(
-                f'Failed to create agent session: {e.__class__.__name__}'
-            )
+            # ... 사용자에게 에러 메시지 전송 ...
             return
 
-    def _create_llm(self, agent_cls: str | None) -> LLM:
+    # agent_session.start에 전달할 파라미터를 묶어주는 헬퍼 메서드나 데이터 클래스
+    def _prepare_session_parameters(self, settings, initial_message, replay_json):
+        if isinstance(settings, ConversationInitData):
+            return SessionParameters(
+                initial_message=initial_message,
+                replay_json=replay_json,
+                git_provider_tokens=settings.git_provider_tokens,
+                # ... 등등
+            )
+        return SessionParameters(initial_message=initial_message, replay_json=replay_json)
+
+    def _create_llm(self, agent_cls: str | None, llm_config: LLMConfig) -> LLM:
         """Initialize LLM, extracted for testing."""
         agent_name = agent_cls if agent_cls is not None else 'agent'
         return LLM(
