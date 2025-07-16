@@ -36,6 +36,74 @@ from openhands.utils.shutdown_listener import should_continue
 WAIT_TIME_BEFORE_CLOSE = 90
 WAIT_TIME_BEFORE_CLOSE_INTERVAL = 5
 
+from dataclasses import dataclass, field
+from typing import List, Dict
+from openhands.core.config.mcp_config import MCPConfig, OpenHandsMCPConfigImpl
+from openhands.core.config.condenser_config import (
+    CondenserPipelineConfig,
+)
+
+@dataclass
+class LLMConfig:
+    model: str = ''
+    api_key: str | None = None
+    base_url: str | None = None
+    # ... 기타 LLM 관련 설정
+
+@dataclass
+class SecurityConfig:
+    confirmation_mode: str = 'auto'
+    security_analyzer: str | None = None
+
+@dataclass
+class SandboxConfig:
+    base_container_image: str | None = None
+    runtime_container_image: str | None = None
+
+@dataclass
+class AgentSettings:
+    """최종적으로 에이전트 실행에 필요한 모든 설정을 담는 컨테이너"""
+    agent_cls: type
+    max_iterations: int
+    max_budget_per_task: float | None
+    llm_config: LLMConfig
+    security_config: SecurityConfig
+    sandbox_config: SandboxConfig
+    mcp_config: MCPConfig # MCPConfig도 dataclass로 정의되었다고 가정
+    condenser_config: CondenserPipelineConfig | None = None
+    # ... 기타 필요한 설정 그룹
+
+
+@dataclass
+class AgentSettings:
+    """최종적으로 에이전트 실행에 필요한 모든 설정을 담는 컨테이너"""
+    agent_cls: type
+    max_iterations: int
+    max_budget_per_task: float | None
+    llm_config: LLMConfig
+    security_config: SecurityConfig
+    sandbox_config: SandboxConfig
+    mcp_config: MCPConfig # MCPConfig도 dataclass로 정의되었다고 가정
+    condenser_config: CondenserPipelineConfig | None = None
+    # ... 기타 필요한 설정 그룹
+
+@dataclass
+class SessionParameters:
+    """
+    세션 시작에 필요한 파라미터를 담는 데이터 클래스입니다.
+    필요한 필드를 상황에 맞게 추가/수정하세요.
+    """
+    initial_message: str | None = None
+    replay_json: str | None = None
+    git_provider_tokens: object = None  # 타입을 구체적으로 지정할 수 있으면 수정하세요
+    # 필요에 따라 추가 필드 선언
+    # 예시:
+    # selected_repository: str | None = None
+    # selected_branch: str | None = None
+    # custom_secrets: dict | None = None
+    # conversation_instructions: str | None = None
+    # 기타 필요한 파라미터들...
+
 
 class AgentSession:
     """Represents a session with an Agent
@@ -83,20 +151,23 @@ class AgentSession:
 
     async def start(
         self,
-        runtime_name: str,
-        config: OpenHandsConfig,
+        # runtime_name: str,
+        # config: OpenHandsConfig,
+        # agent: Agent,
+        # max_iterations: int,
+        # git_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
+        # custom_secrets: CUSTOM_SECRETS_TYPE | None = None,
+        # max_budget_per_task: float | None = None,
+        # agent_to_llm_config: dict[str, LLMConfig] | None = None,
+        # agent_configs: dict[str, AgentConfig] | None = None,
+        # selected_repository: str | None = None,
+        # selected_branch: str | None = None,
+        # initial_message: MessageAction | None = None,
+        # conversation_instructions: str | None = None,
+        # replay_json: str | None = None,
         agent: Agent,
-        max_iterations: int,
-        git_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
-        custom_secrets: CUSTOM_SECRETS_TYPE | None = None,
-        max_budget_per_task: float | None = None,
-        agent_to_llm_config: dict[str, LLMConfig] | None = None,
-        agent_configs: dict[str, AgentConfig] | None = None,
-        selected_repository: str | None = None,
-        selected_branch: str | None = None,
-        initial_message: MessageAction | None = None,
-        conversation_instructions: str | None = None,
-        replay_json: str | None = None,
+        settings: AgentSettings,
+        params: SessionParameters
     ) -> None:
         """Starts the Agent session
         Parameters:
@@ -108,6 +179,8 @@ class AgentSession:
         - agent_to_llm_config:
         - agent_configs:
         """
+        print('works until here')
+        exit(0)
         if self.controller or self.runtime:
             raise RuntimeError(
                 'Session already started. You need to close this session and start a new one.'

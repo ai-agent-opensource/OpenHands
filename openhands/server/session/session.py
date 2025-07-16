@@ -69,6 +69,24 @@ class AgentSettings:
     condenser_config: CondenserPipelineConfig | None = None
     # ... 기타 필요한 설정 그룹
 
+@dataclass
+class SessionParameters:
+    """
+    세션 시작에 필요한 파라미터를 담는 데이터 클래스입니다.
+    필요한 필드를 상황에 맞게 추가/수정하세요.
+    """
+    initial_message: str | None = None
+    replay_json: str | None = None
+    git_provider_tokens: object = None  # 타입을 구체적으로 지정할 수 있으면 수정하세요
+    # 필요에 따라 추가 필드 선언
+    # 예시:
+    # selected_repository: str | None = None
+    # selected_branch: str | None = None
+    # custom_secrets: dict | None = None
+    # conversation_instructions: str | None = None
+    # 기타 필요한 파라미터들...
+
+
 
 
 def create_llm_config(base_llm_config, user_settings: Settings) -> LLMConfig:
@@ -373,7 +391,6 @@ class Session:
         #     )
         #     return
 
-        print('----- Before starting -----')
         try:
             # 1. 순수 함수를 호출해 모든 설정을 한번에 생성 (데이터 변환)
             agent_settings = build_agent_settings(self.config, settings)
@@ -393,12 +410,6 @@ class Session:
             agent_config = self.config.get_agent_config(agent_settings.agent_cls)
             agent_config.condenser = agent_settings.condenser_config
             agent = Agent.get_cls(agent_settings.agent_cls)(llm, agent_config)
-
-            print('----- print -----')
-            print(dir(agent))
-            print(agent.config)
-            print('-'*30)
-            exit(0)
 
             # 3. 세션 시작에 필요한 파라미터를 담는 컨테이너 객체 생성
             session_params = self._prepare_session_parameters(settings, initial_message, replay_json)
