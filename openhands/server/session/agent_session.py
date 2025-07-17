@@ -100,7 +100,7 @@ class SessionParameters:
     # 예시:
     # selected_repository: str | None = None
     # selected_branch: str | None = None
-    # custom_secrets: dict | None = None
+    custom_secrets: CUSTOM_SECRETS_TYPE | None = None
     # conversation_instructions: str | None = None
     # 기타 필요한 파라미터들...
 
@@ -179,8 +179,6 @@ class AgentSession:
         - agent_to_llm_config:
         - agent_configs:
         """
-        print('works until here')
-        exit(0)
         if self.controller or self.runtime:
             raise RuntimeError(
                 'Session already started. You need to close this session and start a new one.'
@@ -195,9 +193,12 @@ class AgentSession:
         finished = False  # For monitoring
         runtime_connected = False
         restored_state = False
+        print(params)
         custom_secrets_handler = UserSecrets(
-            custom_secrets=custom_secrets if custom_secrets else {}
+            custom_secrets=params.custom_secrets if params.custom_secrets else {}
         )
+        print('works until here')
+        exit(0)
         try:
             self._create_security_analyzer(config.security.security_analyzer)
             runtime_connected = await self._create_runtime(
