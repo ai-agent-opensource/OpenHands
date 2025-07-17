@@ -23,6 +23,12 @@ from openhands.events.observation import (
     CmdOutputObservation,
     NullObservation,
 )
+from openhands.integrations.provider import (
+    CUSTOM_SECRETS_TYPE,
+    PROVIDER_TOKEN_TYPE,
+    ProviderHandler,
+)
+
 from openhands.events.observation.agent import RecallObservation
 from openhands.events.observation.error import ErrorObservation
 from openhands.events.serialization import event_from_dict, event_to_dict
@@ -83,6 +89,7 @@ class SessionParameters:
     # selected_repository: str | None = None
     # selected_branch: str | None = None
     # custom_secrets: dict | None = None
+    custom_secrets: CUSTOM_SECRETS_TYPE | None = None
     # conversation_instructions: str | None = None
     # 기타 필요한 파라미터들...
 
