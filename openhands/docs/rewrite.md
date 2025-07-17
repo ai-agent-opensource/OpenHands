@@ -50,5 +50,21 @@ graph TD
 
 
 ### Memo
-"conversation_store" need for tracking conversation status
-- use Agent from session.py instead of making BaseAgent
+"conversation_store" need for tracking conversationt
+n status
+- use Agent from session.py instead of making BaseAge
+- agent_session.start() 안에서 구동시키지 말고, parameters에 넘겨서 사용해보면 어떨까? - fix current structure
+```python
+class AgentSession:
+    def __init__(
+        self,
+        sid: str,
+        runtime_factory: RuntimeFactory,
+        memory_factory: MemoryFactory,
+        controller_factory: ControllerFactory
+    ):
+        self.sid = sid
+        self._runtime_factory = runtime_factory
+        self._memory_factory = memory_factory
+        self._controller_factory = controller_factory
+```
