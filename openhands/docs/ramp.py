@@ -159,16 +159,16 @@ async def main():
     #       실제 프로덕션 코드에서는 이와 같은 무작정 대기는 적절하지 않습니다.
     # await asyncio.sleep(60) # 60초 동안 대기하여 런타임 초기화 시간 확보
 
-    # 에이전트 세션이 완료될 때까지 대기
-    while True:
-        status_response = await get_conversation(conversation_id=conversation_id, user_id=None)
-        current_status = status_response.conversation_status
-        print(f"현재 대화 상태: {current_status}")
+    # # 에이전트 세션이 완료될 때까지 대기
+    # while True:
+    #     status_response = await get_conversation(conversation_id=conversation_id, user_id=None)
+    #     current_status = status_response.conversation_status
+    #     print(f"현재 대화 상태: {current_status}")
 
-        if current_status in ['COMPLETED', 'STOPPED', 'ERROR']:
-            print(f"대화가 최종 상태 '{current_status}'에 도달했습니다.")
-            break
-        await asyncio.sleep(5) # 5초마다 상태를 확인합니다
+    #     if current_status in ['COMPLETED', 'STOPPED', 'ERROR']:
+    #         print(f"대화가 최종 상태 '{current_status}'에 도달했습니다.")
+    #         break
+    #     await asyncio.sleep(5) # 5초마다 상태를 확인합니다
 
 
 asyncio.run(main())
