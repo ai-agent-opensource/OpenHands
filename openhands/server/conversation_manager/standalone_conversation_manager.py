@@ -304,12 +304,39 @@ class StandaloneConversationManager(ConversationManager):
                 )
                 await self.close_session(oldest_conversation_id)
 
+
+        # FIXME: pass object not argument
+        # build @dataclass
+
+        # build FP for composition of agent_session
+        # return AgentSession(runtime=runtime)
+
+        # build agnet_session class
+        # class AgentSession:
+        #     """[OOP-Style] AgentSession은 runtime이라는 '상태'를 가집니다."""
+        #     def __init__(self, runtime):
+        #         self._runtime = runtime         # 상태 (State)
+        #         self._is_running = False        # 상태 (State)
+
+        #     def start(self, agent: Agent):
+        #         """[OOP-Style] 자신의 상태를 기반으로 행위를 수행합니다."""
+        #         print("AgentSession: 세션 시작...")
+        #         if not self._is_running:
+        #             self._runtime.connect()
+        #             agent.think()
+        #             self._is_running = True
+
+        # call the composition but what about compose() in  agent_session.py
+        # agent_session = composition.compose_agent_session()
+
+        # and then pass it as parameter
         session = Session(
             sid=sid,
             file_store=self.file_store,
             config=self.config,
             sio=self.sio,
             user_id=user_id,
+            # agent_session=agent_session
         )
         self._local_agent_loops_by_sid[sid] = session
         asyncio.create_task(

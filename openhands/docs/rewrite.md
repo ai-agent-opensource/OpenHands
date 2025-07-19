@@ -8,6 +8,10 @@ Or Find out why they are excessive abstraction into paper
 ## checking point
 development speed
 
+## TODO
+[] fix Session() in #_conversation_manager.py
+
+
 ### Code
 
 #### runtime
