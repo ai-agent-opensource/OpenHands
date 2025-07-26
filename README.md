@@ -175,5 +175,5 @@ just start with images
 
 ## Understaning the process with ramp.py
 ```
-poetry run python openhands/doc/ramp.py
+poetry run python openhands/docs/ramp.py
 ```
