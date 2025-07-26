@@ -220,15 +220,17 @@ class Session:
         self.last_active_ts = int(time.time())
         self.file_store = file_store
         self.logger = OpenHandsLoggerAdapter(extra={'session_id': sid})
-        self.agent_session = AgentSession(
-            sid,
-            file_store,
-            status_callback=self.queue_status_message,
-            user_id=user_id,
-        )
+        # self.agent_session = AgentSession(
+        #     sid,
+        #     file_store,
+        #     status_callback=self.queue_status_message,
+        #     user_id=user_id,
+        # )
+        self.agent_session = agent_session
         self.agent_session.event_stream.subscribe(
             EventStreamSubscriber.SERVER, self.on_event, self.sid
         )
+
         # Copying this means that when we update variables they are not applied to the shared global configuration!
         self.config = deepcopy(config)
         self.loop = asyncio.get_event_loop()

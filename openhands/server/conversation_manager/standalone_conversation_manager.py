@@ -36,6 +36,43 @@ from .conversation_manager import ConversationManager
 _CLEANUP_INTERVAL = 15
 UPDATED_AT_CALLBACK_ID = 'updated_at_callback_id'
 
+@dataclass
+class SessionConfig:
+    sid: str
+    user_id: str | None
+    file_store: FileStore
+
+
+def build_session_config(sid: str, user_id: str | None, file_store: FileStore) -> SessionConfig:
+    return SessionConfig(sid=sid, user_id=user_id, file_store=file_store)
+
+def compose_agent_session(config: SessionConfig, status_callback: Callable) -> AgentSession:
+    """[FP-Style] AgentSession 조립."""
+    return AgentSession(
+        sid=config.sid,
+        file_store=config.file_store,
+        status_callback=status_callback,
+        user_id=config.user_id,
+    )
+
+def compose_session(config: SessionConfig, sio: socketio.AsyncServer | None) -> Session:
+    """[FP-Style] Session 조립. 콜백은 별도 initializer에서 설정."""
+    agent_session = compose_agent_session(config, lambda *args: None)  # 임시 콜백
+    return Session(
+        sid=config.sid,
+        config=OpenHandsConfig(),  # 실제 config 주입
+        file_store=config.file_store,
+        sio=sio,
+        user_id=config.user_id,
+        agent_session=agent_session
+    )
+
+def initialize_session(session: Session, status_callback: Callable) -> Session:
+    """[FP-Style] 동적 의존성(콜백) 설정."""
+    session.agent_session.status_callback = status_callback
+    session.agent_session.event_stream.subscribe(...)  # 구독 설정
+    return session
+
 
 @dataclass
 class StandaloneConversationManager(ConversationManager):
@@ -330,17 +367,30 @@ class StandaloneConversationManager(ConversationManager):
         # agent_session = composition.compose_agent_session()
 
         # and then pass it as parameter
-        session = Session(
-            sid=sid,
-            file_store=self.file_store,
-            config=self.config,
-            sio=self.sio,
-            user_id=user_id,
-            # agent_session=agent_session
-        )
+        # session = Session(
+        #     sid=sid,
+        #     file_store=self.file_store,
+        #     config=self.config,
+        #     sio=self.sio,
+        #     user_id=user_id,
+        #     # agent_session=agent_session
+        # )
+        config = build_session_config(sid, user_id, self.file_store)
+        session = compose_session(config, self.sio)
+        session = initialize_session(session, session.queue_status_message)
+
+
         self._local_agent_loops_by_sid[sid] = session
         asyncio.create_task(
-            session.initialize_agent(settings, initial_user_msg, replay_json)
+            # session.initialize_agent(settings, initial_user_msg, replay_json)
+
+            # result = try_initialize_agent(session, settings, initial_user_msg, replay_json),
+            try_initialize_agent(session, settings, initial_user_msg, replay_json),
+            print(result, 'check')
+            # if result.is_failure:
+            #     logger.error(result.error)
+            #     return
+            # try_initialize_agent(session, settings,initial_user_msg, replay_json)
         )
         # This does not get added when resuming an existing conversation
         try:
@@ -556,3 +606,11 @@ def _last_updated_at_key(conversation: ConversationMetadata) -> float:
     if last_updated_at is None:
         return 0.0
     return last_updated_at.timestamp()
+
+# def try_initialize_agent(session: Session, settings: Settings) -> Result:  # Result는 커스텀 클래스 (success/value or failure/error)
+async def try_initialize_agent(session: Session, settings: Settings, initial_user_msg, replay_json) -> Result:  # Result는 커스텀 클래스 (success/value or failure/error)
+    try:
+        await session.initialize_agent(settings, initial_user_msg, replay_jsonc)
+        return Result(success=True, value=session)
+    except Exception as e:
+        return Result(success=False, error=e)
