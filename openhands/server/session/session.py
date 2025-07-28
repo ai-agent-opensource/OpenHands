@@ -220,19 +220,7 @@ class Session:
         self.last_active_ts = int(time.time())
         self.file_store = file_store
         self.logger = OpenHandsLoggerAdapter(extra={'session_id': sid})
-        # self.agent_session = AgentSession(
-        #     sid,
-        #     file_store,
-        #     status_callback=self.queue_status_message,
-        #     user_id=user_id,
-        # )
         self.agent_session = agent_session
-        # to standalone_conversation_manager.py
-        # self.agent_session.event_stream.subscribe(
-        #     EventStreamSubscriber.SERVER, self.on_event, self.sid
-        # )
-
-        # Copying this means that when we update variables they are not applied to the shared global configuration!
         self.config = deepcopy(config)
         self.loop = asyncio.get_event_loop()
         self.user_id = user_id
@@ -401,7 +389,15 @@ class Session:
         #     )
         #     return
 
+        #WORKING
+        print('-----session.initialize_agent---')
         try:
+            print('working before loading ')
+            self.agent_session.event_stream.add_event(
+                AgentStateChangedObservation('', AgentState.LOADING),
+                EventSource.ENVIRONMENT,
+            )
+
             # 1. 순수 함수를 호출해 모든 설정을 한번에 생성 (데이터 변환)
             agent_settings = build_agent_settings(self.config, settings)
 
