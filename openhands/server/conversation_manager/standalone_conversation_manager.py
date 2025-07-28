@@ -42,6 +42,12 @@ class SessionConfig:
     user_id: str | None
     file_store: FileStore
 
+@dataclass
+class Result:
+    success: bool
+    error: Exception | None = None
+    value: Session | None = None
+
 
 def build_session_config(sid: str, user_id: str | None, file_store: FileStore) -> SessionConfig:
     return SessionConfig(sid=sid, user_id=user_id, file_store=file_store)
@@ -70,7 +76,9 @@ def compose_session(config: SessionConfig, sio: socketio.AsyncServer | None) -> 
 def initialize_session(session: Session, status_callback: Callable) -> Session:
     """[FP-Style] 동적 의존성(콜백) 설정."""
     session.agent_session.status_callback = status_callback
-    session.agent_session.event_stream.subscribe(...)  # 구독 설정
+    session.agent_session.event_stream.subscribe(
+        EventStreamSubscriber.SERVER, session.on_event, session.sid
+    )  # 구독 설정
     return session
 
 
@@ -385,8 +393,7 @@ class StandaloneConversationManager(ConversationManager):
             # session.initialize_agent(settings, initial_user_msg, replay_json)
 
             # result = try_initialize_agent(session, settings, initial_user_msg, replay_json),
-            try_initialize_agent(session, settings, initial_user_msg, replay_json),
-            print(result, 'check')
+            try_initialize_agent(session, settings, initial_user_msg, replay_json)
             # if result.is_failure:
             #     logger.error(result.error)
             #     return

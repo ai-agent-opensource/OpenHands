@@ -200,7 +200,6 @@ class Session:
     sio: socketio.AsyncServer | None
     last_active_ts: int = 0
     is_alive: bool = True
-    agent_session: AgentSession
     loop: asyncio.AbstractEventLoop
     config: OpenHandsConfig
     file_store: FileStore
@@ -212,6 +211,7 @@ class Session:
         sid: str,
         config: OpenHandsConfig,
         file_store: FileStore,
+        agent_session: AgentSession,
         sio: socketio.AsyncServer | None,
         user_id: str | None = None,
     ):
@@ -227,9 +227,10 @@ class Session:
         #     user_id=user_id,
         # )
         self.agent_session = agent_session
-        self.agent_session.event_stream.subscribe(
-            EventStreamSubscriber.SERVER, self.on_event, self.sid
-        )
+        # to standalone_conversation_manager.py
+        # self.agent_session.event_stream.subscribe(
+        #     EventStreamSubscriber.SERVER, self.on_event, self.sid
+        # )
 
         # Copying this means that when we update variables they are not applied to the shared global configuration!
         self.config = deepcopy(config)
