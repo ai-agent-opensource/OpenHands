@@ -390,9 +390,7 @@ class Session:
         #     return
 
         #WORKING
-        print('-----session.initialize_agent---')
         try:
-            print('working before loading ')
             self.agent_session.event_stream.add_event(
                 AgentStateChangedObservation('', AgentState.LOADING),
                 EventSource.ENVIRONMENT,
@@ -481,6 +479,10 @@ class Session:
             event,
             (CmdOutputObservation, AgentStateChangedObservation, RecallObservation),
         ):
+            print('---environments----')
+            print(event)
+            print(event_to_dict(event))
+            print('-'*50)
             # feedback from the environment to agent actions is understood as agent events by the UI
             event_dict = event_to_dict(event)
             event_dict['source'] = EventSource.AGENT

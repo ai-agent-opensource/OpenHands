@@ -357,12 +357,9 @@ class StandaloneConversationManager(ConversationManager):
 
 
         self._local_agent_loops_by_sid[sid] = session
-        print('here1')
         asyncio.create_task(
             try_initialize_agent(session, settings, initial_user_msg, replay_json)
         )
-
-        print('here2')
         try:
             session.agent_session.event_stream.subscribe(
                 EventStreamSubscriber.SERVER,
@@ -580,10 +577,8 @@ def _last_updated_at_key(conversation: ConversationMetadata) -> float:
 # def try_initialize_agent(session: Session, settings: Settings) -> Result:  # Result는 커스텀 클래스 (success/value or failure/error)
 async def try_initialize_agent(session: Session, settings: Settings, initial_user_msg, replay_json) -> Result:  # Result는 커스텀 클래스 (success/value or failure/error)
     try:
-        print('------try_initialize_agent----- ')
-        #TODO know :: what is replay_json
         await session.initialize_agent(settings, initial_user_msg, replay_json)
-        print('---after try_initialize_agent------')
         return Result(success=True, value=session)
     except Exception as e:
+        logger.info(f'error invoked')
         return Result(success=False, error=e)

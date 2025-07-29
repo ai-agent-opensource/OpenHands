@@ -187,17 +187,22 @@ class AgentSession:
         if self._closed:
             self.logger.warning('Session closed before starting')
             return
+
         self._starting = True
         started_at = time.time()
         self._started_at = started_at
         finished = False  # For monitoring
         runtime_connected = False
         restored_state = False
+
+        print("-"*50)
         print(params)
+        print("-"*50)
+
         custom_secrets_handler = UserSecrets(
             custom_secrets=params.custom_secrets if params.custom_secrets else {}
         )
-        print('works until here')
+
         exit(0)
         try:
             self._create_security_analyzer(config.security.security_analyzer)
