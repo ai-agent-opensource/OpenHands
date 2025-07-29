@@ -42,6 +42,7 @@ from openhands.core.config.mcp_config import MCPConfig, OpenHandsMCPConfigImpl
 from openhands.core.config.condenser_config import (
     CondenserPipelineConfig,
 )
+from openhands.server.session.schemas import SessionParameters
 
 @dataclass
 class LLMConfig:
@@ -74,35 +75,42 @@ class AgentSettings:
     # ... 기타 필요한 설정 그룹
 
 
-@dataclass
-class AgentSettings:
-    """최종적으로 에이전트 실행에 필요한 모든 설정을 담는 컨테이너"""
-    agent_cls: type
-    max_iterations: int
-    max_budget_per_task: float | None
-    llm_config: LLMConfig
-    security_config: SecurityConfig
-    sandbox_config: SandboxConfig
-    mcp_config: MCPConfig # MCPConfig도 dataclass로 정의되었다고 가정
-    condenser_config: CondenserPipelineConfig | None = None
-    # ... 기타 필요한 설정 그룹
+# @dataclass
+# class AgentSettings:
+#     """최종적으로 에이전트 실행에 필요한 모든 설정을 담는 컨테이너"""
+#     agent_cls: type
+#     max_iterations: int
+#     max_budget_per_task: float | None
+#     llm_config: LLMConfig
+#     security_config: SecurityConfig
+#     sandbox_config: SandboxConfig
+#     mcp_config: MCPConfig # MCPConfig도 dataclass로 정의되었다고 가정
+#     condenser_config: CondenserPipelineConfig | None = None
+#     # ... 기타 필요한 설정 그룹
+
+# def compose_session_params(git_provider_tokens: object | None, custom_secrets: CUSTOM_SECRETS_TYPE | None , selected_repository: str | None , selected_branch: str | None) -> SessionParameters:
+#     return SessionParameters(
+#         git_provider_tokens=git_provider_tokens,
+#         custom_secrets=custom_secrets,
+#         selected_repository=selected_repository,
+#         selected_branch=selected_branch,
+#     )
 
 @dataclass
-class SessionParameters:
-    """
-    세션 시작에 필요한 파라미터를 담는 데이터 클래스입니다.
-    필요한 필드를 상황에 맞게 추가/수정하세요.
-    """
-    initial_message: str | None = None
-    replay_json: str | None = None
-    git_provider_tokens: object = None  # 타입을 구체적으로 지정할 수 있으면 수정하세요
-    # 필요에 따라 추가 필드 선언
-    # 예시:
-    # selected_repository: str | None = None
-    # selected_branch: str | None = None
-    custom_secrets: CUSTOM_SECRETS_TYPE | None = None
-    # conversation_instructions: str | None = None
-    # 기타 필요한 파라미터들...
+class RuntimeParams:
+    runtime_name: str
+    config: OpenHandsConfig
+    agent: Agent
+
+def compose_runtime_params(config: OpenHandsConfig, agent: Agent):
+    runtime_name = config.runtime
+    return RuntimeParams(
+        runtime_name=runtime_name,
+        config=config,
+        agent=agent,
+    )
+
+
 
 
 class AgentSession:
@@ -165,6 +173,7 @@ class AgentSession:
         # initial_message: MessageAction | None = None,
         # conversation_instructions: str | None = None,
         # replay_json: str | None = None,
+        config: OpenHandsConfig,
         agent: Agent,
         settings: AgentSettings,
         params: SessionParameters
@@ -203,18 +212,26 @@ class AgentSession:
             custom_secrets=params.custom_secrets if params.custom_secrets else {}
         )
 
-        exit(0)
         try:
             self._create_security_analyzer(config.security.security_analyzer)
-            runtime_connected = await self._create_runtime(
-                runtime_name=runtime_name,
-                config=config,
-                agent=agent,
-                git_provider_tokens=git_provider_tokens,
-                custom_secrets=custom_secrets,
-                selected_repository=selected_repository,
-                selected_branch=selected_branch,
-            )
+            runtimeParams = compose_runtime_params(config, agent)
+
+
+            print('-'*50)
+            print('works runtimeParams')
+            print('-'*50)
+            exit(0)
+            runtime_connected = await self._create_runtime(runtimeParams, params)
+
+            # runtime_connected = await self._create_runtime(
+            #     runtime_name=runtime_name,
+            #     config=config,
+            #     agent=agent,
+            #     git_provider_tokens=git_provider_tokens,
+            #     custom_secrets=custom_secrets,
+            #     selected_repository=selected_repository,
+            #     selected_branch=selected_branch,
+            # )
 
             repo_directory = None
             if self.runtime and runtime_connected and selected_repository:
@@ -379,13 +396,14 @@ class AgentSession:
 
     async def _create_runtime(
         self,
-        runtime_name: str,
-        config: OpenHandsConfig,
-        agent: Agent,
-        git_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
-        custom_secrets: CUSTOM_SECRETS_TYPE | None = None,
-        selected_repository: str | None = None,
-        selected_branch: str | None = None,
+        # runtime_name: str,
+        # config: OpenHandsConfig,
+        # agent: Agent,
+        # git_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
+        # custom_secrets: CUSTOM_SECRETS_TYPE | None = None,
+        # selected_repository: str | None = None,
+        # selected_branch: str | None = None,
+        runtimeParams: RuntimeParams
     ) -> bool:
         """Creates a runtime instance
 

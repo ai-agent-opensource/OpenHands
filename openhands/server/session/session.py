@@ -38,60 +38,16 @@ from openhands.server.session.agent_session import AgentSession
 from openhands.server.session.conversation_init_data import ConversationInitData
 from openhands.storage.data_models.settings import Settings
 from openhands.storage.files import FileStore
+from openhands.server.session.schemas import (
+    AgentSettings,
+    LLMConfig,
+    SandboxConfig,
+    SecurityConfig,
+    SessionParameters,
+    CondenserPipelineConfig
+)
 
 ROOM_KEY = 'room:{sid}'
-
-
-from dataclasses import dataclass, field
-from typing import List, Dict
-
-@dataclass
-class LLMConfig:
-    model: str = ''
-    api_key: str | None = None
-    base_url: str | None = None
-    # ... 기타 LLM 관련 설정
-
-@dataclass
-class SecurityConfig:
-    confirmation_mode: str = 'auto'
-    security_analyzer: str | None = None
-
-@dataclass
-class SandboxConfig:
-    base_container_image: str | None = None
-    runtime_container_image: str | None = None
-
-@dataclass
-class AgentSettings:
-    """최종적으로 에이전트 실행에 필요한 모든 설정을 담는 컨테이너"""
-    agent_cls: type
-    max_iterations: int
-    max_budget_per_task: float | None
-    llm_config: LLMConfig
-    security_config: SecurityConfig
-    sandbox_config: SandboxConfig
-    mcp_config: MCPConfig # MCPConfig도 dataclass로 정의되었다고 가정
-    condenser_config: CondenserPipelineConfig | None = None
-    # ... 기타 필요한 설정 그룹
-
-@dataclass
-class SessionParameters:
-    """
-    세션 시작에 필요한 파라미터를 담는 데이터 클래스입니다.
-    필요한 필드를 상황에 맞게 추가/수정하세요.
-    """
-    initial_message: str | None = None
-    replay_json: str | None = None
-    git_provider_tokens: object = None  # 타입을 구체적으로 지정할 수 있으면 수정하세요
-    # 필요에 따라 추가 필드 선언
-    # 예시:
-    # selected_repository: str | None = None
-    # selected_branch: str | None = None
-    # custom_secrets: dict | None = None
-    custom_secrets: CUSTOM_SECRETS_TYPE | None = None
-    # conversation_instructions: str | None = None
-    # 기타 필요한 파라미터들...
 
 
 
@@ -420,6 +376,7 @@ class Session:
 
             # 4. 단순화된 파라미터로 세션 시작
             await self.agent_session.start(
+                config=self.config,
                 agent=agent,
                 settings=agent_settings,
                 params=session_params
