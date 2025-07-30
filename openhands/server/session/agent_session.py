@@ -110,8 +110,74 @@ def compose_runtime_params(config: OpenHandsConfig, agent: Agent):
         agent=agent,
     )
 
+# Part 1: Data Structures (새 dataclass 추가)
+@dataclass
+class MemoryParams:
+    event_stream: EventStream
+    runtime: Runtime
+    selected_repository: str | None
+    repo_directory: str | None
+    conversation_instructions: str | None
+    custom_secrets_descriptions: dict[str, str]
 
+@dataclass
+class ControllerParams:
+    agent: Agent
+    confirmation_mode: bool
+    max_iterations: int
+    max_budget_per_task: float | None
+    agent_to_llm_config: dict[str, LLMConfig] | None
+    agent_configs: dict[str, AgentConfig] | None
+    replay_events: list[Event] | None
 
+# Part 2: Data Transformation Logic (stateless 빌더 함수)
+def build_env_vars(custom_secrets: CUSTOM_SECRETS_TYPE | None) -> dict:
+    """환경 변수 데이터를 변환합니다."""
+    handler = UserSecrets(custom_secrets or {})
+    return handler.get_env_vars()
+
+# Part 3: Object Assembly Logic (FP Composition 함수)
+def compose_security_analyzer(analyzer_name: str | None, event_stream: EventStream) -> SecurityAnalyzer | None:
+    """[FP-Style] SecurityAnalyzer를 조립합니다."""
+    if analyzer_name:
+        return options.SecurityAnalyzers.get(analyzer_name, SecurityAnalyzer)(event_stream)
+    return None
+
+async def compose_runtime(params: RuntimeParams, session_params: SessionParameters) -> Runtime:
+    """[FP-Style] Runtime을 조립합니다."""
+    # 원본 _create_runtime 로직 재사용/적응
+    custom_secrets_handler = UserSecrets(session_params.custom_secrets or {})
+    env_vars = build_env_vars(session_params.custom_secrets)  # 빌더 호출
+
+    runtime_cls = get_runtime_cls(params.runtime_name)
+    # ... (RemoteRuntime vs. 다른 경우 분기 로직 그대로)
+    runtime = runtime_cls(...)  # 세부 생성
+    await runtime.connect()
+    await runtime.clone_or_init_repo(...)  # 등등
+    return runtime
+
+async def compose_memory(params: MemoryParams) -> Memory:
+    """[FP-Style] Memory를 조립합니다."""
+    memory = Memory(
+        event_stream=params.event_stream,
+        sid=...,  # sid 등 필요한 값 전달
+        status_callback=...,
+    )
+    memory.set_runtime_info(params.runtime, params.custom_secrets_descriptions)
+    memory.set_conversation_instructions(params.conversation_instructions)
+    # ... (microagents 로딩 등 원본 로직)
+    return memory
+
+def compose_controller(params: ControllerParams, event_stream: EventStream, ...) -> AgentController:
+    """[FP-Style] AgentController를 조립합니다."""
+    # 원본 _create_controller 로직 재사용
+    initial_state = ...  # 상태 복원
+    controller = AgentController(
+        agent=params.agent,
+        confirmation_mode=params.confirmation_mode,
+        # ... 나머지 파라미터
+    )
+    return controller
 
 class AgentSession:
     """Represents a session with an Agent
@@ -200,13 +266,11 @@ class AgentSession:
         self._starting = True
         started_at = time.time()
         self._started_at = started_at
+
         finished = False  # For monitoring
         runtime_connected = False
         restored_state = False
 
-        print("-"*50)
-        print(params)
-        print("-"*50)
 
         custom_secrets_handler = UserSecrets(
             custom_secrets=params.custom_secrets if params.custom_secrets else {}
@@ -214,14 +278,13 @@ class AgentSession:
 
         try:
             self._create_security_analyzer(config.security.security_analyzer)
+            # 1. Security Analyzer 조립
+            self.security_analyzer = compose_security_analyzer(config.security.security_analyzer, self.event_stream)
+
             runtimeParams = compose_runtime_params(config, agent)
-
-
-            print('-'*50)
-            print('works runtimeParams')
-            print('-'*50)
             exit(0)
             runtime_connected = await self._create_runtime(runtimeParams, params)
+            runtime_connected = await compose_runtime(runtime_params, params)
 
             # runtime_connected = await self._create_runtime(
             #     runtime_name=runtime_name,
@@ -244,12 +307,20 @@ class AgentSession:
             if custom_secrets:
                 custom_secrets_handler.set_event_stream_secrets(self.event_stream)
 
-            self.memory = await self._create_memory(
-                selected_repository=selected_repository,
-                repo_directory=repo_directory,
-                conversation_instructions=conversation_instructions,
-                custom_secrets_descriptions=custom_secrets_handler.get_custom_secrets_descriptions(),
+            # 3. Memory 조립
+            memory_params = MemoryParams(
+                event_stream=self.event_stream,
+                runtime=self.runtime,
+                # ... 나머지 값 채우기
             )
+
+            # self.memory = await self._create_memory(
+            #     selected_repository=selected_repository,
+            #     repo_directory=repo_directory,
+            #     conversation_instructions=conversation_instructions,
+            #     custom_secrets_descriptions=custom_secrets_handler.get_custom_secrets_descriptions(),
+            # )
+            self.memory = await compose_memory(memory_params)
 
             # NOTE: this needs to happen before controller is created
             # so MCP tools can be included into the SystemMessageAction
@@ -268,14 +339,23 @@ class AgentSession:
                     agent_configs,
                 )
             else:
-                self.controller, restored_state = self._create_controller(
-                    agent,
-                    config.security.confirmation_mode,
-                    max_iterations,
-                    max_budget_per_task=max_budget_per_task,
-                    agent_to_llm_config=agent_to_llm_config,
-                    agent_configs=agent_configs,
+                # 4. Controller 조립
+                controller_params = ControllerParams(
+                    agent=agent,
+                    confirmation_mode=config.security.confirmation_mode,
+                    # ... 나머지 값
                 )
+                # self.controller, restored_state = self._create_controller(
+                #     agent,
+                #     config.security.confirmation_mode,
+                #     max_iterations,
+                #     max_budget_per_task=max_budget_per_task,
+                #     agent_to_llm_config=agent_to_llm_config,
+                #     agent_configs=agent_configs,
+                # )
+                self.controller, restored_state = compose_controller(controller_params, self.event_stream, ...)
+
+
 
             if not self._closed:
                 if initial_message:
