@@ -47,6 +47,8 @@ from openhands.server.session.schemas import (
     CondenserPipelineConfig
 )
 
+from openhands.core.config.agent_config import AgentConfig
+
 ROOM_KEY = 'room:{sid}'
 
 
@@ -149,6 +151,33 @@ def build_agent_settings(base_config, user_settings: Settings) -> AgentSettings:
         mcp_config=mcp_conf,
         condenser_config=condenser_conf,
     )
+
+# 새 FP 함수 (Part 2: Data Transformation Logic)
+def get_llm_config_from_agent(config: OpenHandsConfig, agent_name: str) -> LLMConfig:
+    """주어진 config에서 agent_name에 맞는 LLMConfig를 반환합니다."""
+    # 원본 self.config.get_llm_config_from_agent() 로직 재사용/적응
+    # (실제 구현은 config의 내부 메서드를 호출하거나 로직 복사)
+    return config.get_llm_config_from_agent(agent_name)  # config를 파라미터로 받아 self 제거
+
+# 업데이트된 Composition 함수 (Part 3: Object Assembly Logic)
+def compose_llm(config: OpenHandsConfig, agent_cls: str | None, llm_config: LLMConfig) -> LLM:
+    agent_name = agent_cls if agent_cls is not None else 'agent'
+    llm_specific_config = get_llm_config_from_agent(config, agent_name)  # 새 함수 호출
+    return LLM(
+        config=llm_specific_config,
+        retry_listener=_notify_on_llm_retry,  # 별도 함수로 추출 (기존 self._notify_on_llm_retry 대신)
+    )
+
+def _notify_on_llm_retry(self, retries: int, max: int) -> None:
+        msg_id = 'STATUS$LLM_RETRY'
+        self.queue_status_message(
+            'info', msg_id, f'Retrying LLM request, {retries} / {max}'
+        )
+
+# need to add AgentConfig
+def compose_agent(agent_cls: type, llm:LLM, agent_config: AgentConfig):
+    return Agent.get_cls(agent_cls)(llm, agent_config)
+
 
 
 class Session:
@@ -366,10 +395,11 @@ class Session:
 
             # 3. 완성된 설정(데이터)을 바탕으로 실제 행위를 하는 '객체'들을 생성 (컴포지션)
             # 이 부분부터는 다시 OOP의 세계와 자연스럽게 연결됩니다.
-            llm = self._create_llm(agent_settings.agent_cls, agent_settings.llm_config)
+            llm = compose_llm(self.config, agent_settings.agent_cls, agent_settings.llm_config)
+
             agent_config = self.config.get_agent_config(agent_settings.agent_cls)
             agent_config.condenser = agent_settings.condenser_config
-            agent = Agent.get_cls(agent_settings.agent_cls)(llm, agent_config)
+            agent = compose_agent(agent_settings.agent_cls, llm, agent_config)
 
             # 3. 세션 시작에 필요한 파라미터를 담는 컨테이너 객체 생성
             session_params = self._prepare_session_parameters(settings, initial_message, replay_json)
